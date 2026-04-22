@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import axios from "axios";
 
+const rawApiBaseUrl =
+  process.env.REACT_APP_API_BASE_URL ||
+  (window.location.hostname === "localhost" ? "http://localhost:8000" : "/api");
+const API_BASE_URL = rawApiBaseUrl.replace(/\/$/, "");
+
 function App() {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -21,7 +26,7 @@ function App() {
 
     try {
       const res = await axios.post(
-        "http://localhost:8000/detect",
+        `${API_BASE_URL}/detect`,
         formData,
         {
           headers: {
