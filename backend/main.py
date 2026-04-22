@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from ultralytics import YOLO
 from PIL import Image
+from pathlib import Path
 import io, base64
 
 app = FastAPI()
@@ -20,7 +21,8 @@ app.add_middleware(
 # -----------------------------
 # LOAD YOLO MODEL
 # -----------------------------
-model = YOLO("yolov8n.pt")  # auto-download
+MODEL_PATH = Path(__file__).resolve().parent / "yolov8n.pt"
+model = YOLO(str(MODEL_PATH))
 
 # -----------------------------
 # ROOT
