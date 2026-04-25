@@ -4,7 +4,7 @@ import axios from "axios";
 const isLocalhost = window.location.hostname === "localhost";
 const rawApiBaseUrl =
   process.env.REACT_APP_API_BASE_URL ||
-  (isLocalhost ? "http://localhost:8000" : "");
+  (isLocalhost ? "http://localhost:8000" : "/_/backend");
 const API_BASE_URL = rawApiBaseUrl.replace(/\/$/, "");
 
 function App() {
@@ -21,12 +21,6 @@ function App() {
 
   const handleDetect = async () => {
     if (!file) return alert("Upload image first");
-    if (!API_BASE_URL) {
-      alert(
-        "Backend URL not configured. Set REACT_APP_API_BASE_URL in Vercel to your Render backend URL (for example: https://your-service.onrender.com)."
-      );
-      return;
-    }
 
     const formData = new FormData();
     formData.append("file", file);
