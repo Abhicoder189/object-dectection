@@ -1,31 +1,41 @@
 import React, { useState } from "react";
 import axios from "axios";
 
-const isLocalhost = window.location.hostname === "localhost";
-const rawApiBaseUrl =
-  process.env.REACT_APP_API_BASE_URL ||
-  (isLocalhost ? "http://localhost:8000" : "/_/backend");
-const API_BASE_URL = rawApiBaseUrl.replace(/\/$/, "");
+// ✅ Correct way: always rely on env variable
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL?.replace(/\/$/, "");
 
 function App() {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleUpload = (e) => {
     const f = e.target.files[0];
+    if (!f) return;
+
     setFile(f);
     setPreview(URL.createObjectURL(f));
     setResult(null);
   };
 
   const handleDetect = async () => {
-    if (!file) return alert("Upload image first");
+    if (!file) {
+      alert("Upload image first");
+      return;
+    }
+
+    if (!API_BASE_URL) {
+      alert("API URL not configured");
+      return;
+    }
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
+      setLoading(true);
+
       const res = await axios.post(
         `${API_BASE_URL}/detect`,
         formData,
@@ -36,17 +46,25 @@ function App() {
         }
       );
 
-      // 🔥 IMPORTANT
-      setResult(`data:image/png;base64,${res.data.image}`);
+      // ✅ Proper base64 handling
+      if (res.data?.image) {
+        setResult(`data:image/png;base64,${res.data.image}`);
+      } else {
+        throw new Error("Invalid response from backend");
+      }
 
     } catch (err) {
       console.error("API Error:", err);
+
       const errorMessage =
         err?.response?.data?.error ||
         err?.response?.data?.detail ||
         err?.message ||
         "Backend error";
+
       alert(`Backend error: ${errorMessage}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -57,7 +75,9 @@ function App() {
       <input type="file" onChange={handleUpload} />
       <br /><br />
 
-      <button onClick={handleDetect}>Detect</button>
+      <button onClick={handleDetect} disabled={loading}>
+        {loading ? "Processing..." : "Detect"}
+      </button>
 
       <br /><br />
 
