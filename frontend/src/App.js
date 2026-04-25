@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import axios from "axios";
 
+const isLocalhost = window.location.hostname === "localhost";
 const rawApiBaseUrl =
   process.env.REACT_APP_API_BASE_URL ||
-  (window.location.hostname === "localhost" ? "http://localhost:8000" : "/api");
+  (isLocalhost ? "http://localhost:8000" : "");
 const API_BASE_URL = rawApiBaseUrl.replace(/\/$/, "");
 
 function App() {
@@ -20,6 +21,12 @@ function App() {
 
   const handleDetect = async () => {
     if (!file) return alert("Upload image first");
+    if (!API_BASE_URL) {
+      alert(
+        "Backend URL not configured. Set REACT_APP_API_BASE_URL in Vercel to your Render backend URL (for example: https://your-service.onrender.com)."
+      );
+      return;
+    }
 
     const formData = new FormData();
     formData.append("file", file);
@@ -40,7 +47,12 @@ function App() {
 
     } catch (err) {
       console.error("API Error:", err);
-      alert("Backend error");
+      const errorMessage =
+        err?.response?.data?.error ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        "Backend error";
+      alert(`Backend error: ${errorMessage}`);
     }
   };
 

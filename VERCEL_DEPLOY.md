@@ -18,14 +18,14 @@ git push
 4. Keep **Root Directory** as project root (do not set it to `frontend`).
 5. Leave build settings as detected from `vercel.json`.
 
-## 3) Environment variables (optional)
+## 3) Environment variables (required when backend is on Render)
 
-The frontend already auto-selects API URL:
-- Local: `http://localhost:8000`
-- Vercel: `/api`
+In your Vercel project settings, add:
+- `REACT_APP_API_BASE_URL` = `https://<your-render-service>.onrender.com`
 
-If you want to override it, add this variable in Vercel:
-- `REACT_APP_API_BASE_URL` = `/api`
+Notes:
+- Do not add a trailing slash.
+- Example: `https://image-classifier-api.onrender.com`
 
 ## 4) Deploy
 
@@ -41,5 +41,6 @@ After deployment:
 
 ## Notes
 
-- API requests route through `/api/*` to `api/index.py`, which exports your FastAPI app from `backend/main.py`.
-- If deployment fails due to model/runtime limits, use a smaller model or move inference to a dedicated backend service and keep Vercel for frontend only.
+- Frontend API requests go directly to your Render backend URL from `REACT_APP_API_BASE_URL`.
+- If you update the env var, trigger a new Vercel deployment so the React build picks up the new value.
+- If deployment fails due to model/runtime limits, keep inference on Render and use Vercel only for frontend hosting.
