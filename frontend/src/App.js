@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
 
-// ✅ Correct way: always rely on env variable
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL?.replace(/\/$/, "");
+// ✅ Correct way: use env var or default to same-origin `/api`
+const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL?.replace(/\/$/, "")) || (window.location.origin + "/api");
 
 function App() {
   const [file, setFile] = useState(null);
