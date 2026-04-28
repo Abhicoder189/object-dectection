@@ -1,8 +1,29 @@
 import React, { useState, useRef, useEffect } from "react";
 
 // ⚠️ UPDATE THIS WITH YOUR ACTUAL HUGGING FACE SPACE URL
-// Format: https://huggingface.co/spaces/YOUR_USERNAME/SPACE_NAME
-const DEFAULT_HF_SPACE = "https://huggingface.co/spaces/Abhi189/obj-detect";
+// Direct format (recommended): https://username-spacename.hf.space
+// Page format will be auto-converted: https://huggingface.co/spaces/username/spacename
+const DEFAULT_HF_SPACE = "https://abhi189-obj-detect.hf.space";
+
+// Helper function to normalize HF Space URLs
+const normalizeHFSpaceUrl = (url) => {
+  if (!url) return "";
+  
+  // Already in direct format
+  if (url.includes(".hf.space")) {
+    return url.replace(/\/$/, ""); // Remove trailing slash
+  }
+  
+  // Convert from page format to direct format
+  // https://huggingface.co/spaces/username/spacename -> https://username-spacename.hf.space
+  const match = url.match(/huggingface\.co\/spaces\/([^\/]+)\/(.+?)(\/$)?$/);
+  if (match) {
+    const [, username, spacename] = match;
+    return `https://${username}-${spacename}.hf.space`;
+  }
+  
+  return url.replace(/\/$/, "");
+};
 
 export default function App() {
   const [file, setFile] = useState(null);
@@ -10,9 +31,10 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [predictions, setPredictions] = useState(null);
   const [error, setError] = useState(null);
-  const [hfSpaceUrl, setHfSpaceUrl] = useState(() => 
-    localStorage.getItem("hfSpaceUrl") || DEFAULT_HF_SPACE
-  );
+  const [hfSpaceUrl, setHfSpaceUrl] = useState(() => {
+    const stored = localStorage.getItem("hfSpaceUrl");
+    return normalizeHFSpaceUrl(stored || DEFAULT_HF_SPACE);
+  });
   const [confThreshold, setConfThreshold] = useState(() => 
     parseFloat(localStorage.getItem("confThreshold")) || 0.5
   );
@@ -76,7 +98,7 @@ export default function App() {
       return;
     }
 
-    if (!hfSpaceUrl || hfSpaceUrl.includes("YOUR_USERNAME")) {
+    if (!hfSpaceUrl || hfSpaceUrl.includes("YOUR_USERNAME") || hfSpaceUrl.includes("username-spacename")) {
       setError("❌ Please configure your Hugging Face Space URL first!");
       return;
     }
@@ -238,10 +260,11 @@ export default function App() {
             type="text"
             value={hfSpaceUrl}
             onChange={(e) => {
-              setHfSpaceUrl(e.target.value);
-              localStorage.setItem("hfSpaceUrl", e.target.value);
+              const normalized = normalizeHFSpaceUrl(e.target.value);
+              setHfSpaceUrl(normalized);
+              localStorage.setItem("hfSpaceUrl", normalized);
             }}
-            placeholder="https://your-username-yolov8-detector.hf.space"
+            placeholder="https://username-spacename.hf.space"
             style={{
               width: "100%",
               padding: "8px",
