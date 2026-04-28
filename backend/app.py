@@ -73,8 +73,7 @@ demo = gr.Interface(
     title="🎯 YOLOv8 Object Detection",
     description="Upload an image to detect objects using YOLOv8 nano model.",
     examples=[],
-    allow_flagging="never",
-    cache_examples=False,
+    
 )
 
 if __name__ == "__main__":
