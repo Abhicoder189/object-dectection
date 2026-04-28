@@ -116,28 +116,59 @@ export default function App() {
         reader.readAsDataURL(blob);
       });
 
-      // Call Hugging Face Space API
-      const response = await fetch(`${hfSpaceUrl}/api/predict/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          data: [base64, confThreshold],
-        }),
-      });
+      // Try Gradio Interface API endpoint (works with gr.Interface)
+      const endpoints = [
+        `${hfSpaceUrl}/api/predict/`,           // Standard Gradio endpoint
+        `${hfSpaceUrl}/call/predict`,           // Alternative format
+        `${hfSpaceUrl}/api/predict`,            // Without trailing slash
+      ];
 
-      if (!response.ok) {
-        const txt = await response.text();
-        throw new Error(`HF Space error ${response.status}: ${txt}`);
+      let response = null;
+      let lastError = null;
+      let successUrl = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          console.log("Trying endpoint:", endpoint);
+          response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              data: [base64, confThreshold],
+            }),
+          });
+
+          if (response.ok) {
+            successUrl = endpoint;
+            console.log("✅ Success with endpoint:", endpoint);
+            break;
+          } else {
+            lastError = `${response.status}: ${response.statusText}`;
+          }
+        } catch (err) {
+          lastError = err.message;
+          console.warn(`Failed with ${endpoint}:`, err.message);
+        }
+      }
+
+      if (!response || !response.ok) {
+        throw new Error(
+          `Could not reach Space API. Tried endpoints: ${endpoints.join(", ")}. ` +
+          `Last error: ${lastError}. ` +
+          `Space may still be starting - wait 30 seconds and try again.`
+        );
       }
 
       const json = await response.json();
+      console.log("API Response:", json);
       
       // Handle Gradio response format
-      if (json?.data && json.data[0]) {
+      if (json?.data && Array.isArray(json.data) && json.data[0]) {
         // The output image from Gradio
         const outputImagePath = json.data[0];
+        console.log("Output image:", outputImagePath);
         
         // Create an image from the URL
         const img = new Image();
@@ -154,17 +185,21 @@ export default function App() {
           
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         };
+        img.onerror = () => {
+          setError("Failed to load result image from Space");
+        };
         img.src = outputImagePath;
         
         setPredictions({ image: outputImagePath, message: "✅ Detection completed!" });
       } else if (json?.error) {
         throw new Error(json.error);
       } else {
+        console.log("Unexpected response format:", json);
         setPredictions(json);
       }
     } catch (err) {
-      console.error(err);
-      setError(err.message || "Detection failed. Check console for details.");
+      console.error("Detection error:", err);
+      setError(err.message || "Detection failed. Check browser console for details.");
     } finally {
       setLoading(false);
     }
@@ -321,6 +356,33 @@ export default function App() {
           }}
         >
           {loading ? "🔄 Detecting..." : "🚀 Detect Objects"}
+        </button>
+        
+        <button 
+          onClick={async () => {
+            try {
+              const response = await fetch(`${hfSpaceUrl}/config`);
+              if (response.ok) {
+                alert("✅ Space is running! Ready to use.");
+              } else {
+                alert("⚠️ Space is not responding. It may still be starting. Try again in 30 seconds.");
+              }
+            } catch (err) {
+              alert("❌ Cannot reach Space. Check URL or wait for deployment to complete.");
+            }
+          }}
+          style={{ 
+            marginLeft: "8px",
+            padding: "8px 16px",
+            background: "#6c757d",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "12px"
+          }}
+        >
+          🔍 Check Space Status
         </button>
       </div>
 
