@@ -132,9 +132,10 @@ export default function App() {
 
       // Try Gradio Interface API endpoint (works with gr.Interface)
       const endpoints = [
-        `${spaceBaseUrl}/run/predict`,
         `${spaceBaseUrl}/api/predict/`,
+        `${spaceBaseUrl}/run/predict`,
         `${spaceBaseUrl}/api/predict`,
+        `${spaceBaseUrl}/call/predict`,
       ];
 
       let response = null;
@@ -379,16 +380,25 @@ export default function App() {
         
         <button 
           onClick={async () => {
-            try {
-              const response = await fetch(`${normalizedSpaceUrl}/config`);
-              if (response.ok) {
-                alert("✅ Space is running! Ready to use.");
-              } else {
-                alert("⚠️ Space is not responding. It may still be starting. Try again in 30 seconds.");
+            const statusEndpoints = [
+              `${normalizedSpaceUrl}/config`,
+              `${normalizedSpaceUrl}/api/predict/`,
+              `${normalizedSpaceUrl}/run/predict`,
+              `${normalizedSpaceUrl}/api/predict`,
+            ];
+            
+            let results = [];
+            for (const ep of statusEndpoints) {
+              try {
+                const res = await fetch(ep, { method: 'HEAD' }).catch(() => 
+                  fetch(ep, { method: 'GET' })
+                );
+                results.push(`${ep}: ${res?.status || 'ERR'}`);
+              } catch (e) {
+                results.push(`${ep}: Failed`);
               }
-            } catch (err) {
-              alert("❌ Cannot reach Space. Check URL or wait for deployment to complete.");
             }
+            alert(`Space Status:\n\n${results.join('\n')}\n\nIf all show 404 or Failed, Space may not be deployed yet.`);
           }}
           style={{ 
             marginLeft: "8px",
@@ -401,7 +411,7 @@ export default function App() {
             fontSize: "12px"
           }}
         >
-          🔍 Check Space Status
+          🔍 Diagnose Space Status
         </button>
       </div>
 
