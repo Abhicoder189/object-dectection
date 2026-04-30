@@ -139,7 +139,6 @@ export default function App() {
 
       let response = null;
       let lastError = null;
-      let successUrl = null;
 
       for (const endpoint of endpoints) {
         try {
@@ -155,7 +154,6 @@ export default function App() {
           });
 
           if (response.ok) {
-            successUrl = endpoint;
             console.log("✅ Success with endpoint:", endpoint);
             break;
           } else {
