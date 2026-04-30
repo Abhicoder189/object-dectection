@@ -4,9 +4,6 @@
   "installCommand": "npm install",
   "devCommand": "npm start",
   "framework": "create-react-app",
-  "env": {
-    "REACT_APP_HF_SPACE_URL": "@hf_space_url"
-  },
   "functions": {
     "api/**/*.js": {
       "memory": 1024,
