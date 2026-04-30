@@ -6,23 +6,34 @@ import React, { useState, useRef, useEffect } from "react";
 const DEFAULT_HF_SPACE = "https://abhi189-obj-detect.hf.space";
 
 // Helper function to normalize HF Space URLs
-const normalizeHFSpaceUrl = (url) => {
-  if (!url) return "";
-  
-  // Already in direct format
-  if (url.includes(".hf.space")) {
-    return url.replace(/\/$/, ""); // Remove trailing slash
+const normalizeHFSpaceUrl = (rawUrl) => {
+  if (!rawUrl) return "";
+
+  const input = rawUrl.trim();
+  const withProtocol = /^https?:\/\//i.test(input) ? input : `https://${input}`;
+
+  try {
+    const parsed = new URL(withProtocol);
+    const host = parsed.hostname.toLowerCase();
+    const pathParts = parsed.pathname.split("/").filter(Boolean);
+
+    // Direct runtime host format: https://username-spacename.hf.space
+    if (host.endsWith(".hf.space")) {
+      return `${parsed.protocol}//${parsed.hostname}`;
+    }
+
+    // Convert page format to runtime host:
+    // https://huggingface.co/spaces/username/spacename[/anything]
+    if (host === "huggingface.co" && pathParts[0] === "spaces" && pathParts.length >= 3) {
+      const username = pathParts[1];
+      const spacename = pathParts[2];
+      return `https://${username}-${spacename}.hf.space`;
+    }
+
+    return `${parsed.protocol}//${parsed.hostname}`;
+  } catch {
+    return input.replace(/\/$/, "");
   }
-  
-  // Convert from page format to direct format
-  // https://huggingface.co/spaces/username/spacename -> https://username-spacename.hf.space
-  const match = url.match(/huggingface\.co\/spaces\/([^\/]+)\/(.+?)(\/$)?$/);
-  if (match) {
-    const [, username, spacename] = match;
-    return `https://${username}-${spacename}.hf.space`;
-  }
-  
-  return url.replace(/\/$/, "");
 };
 
 export default function App() {
@@ -38,6 +49,7 @@ export default function App() {
   const [confThreshold, setConfThreshold] = useState(() => 
     parseFloat(localStorage.getItem("confThreshold")) || 0.5
   );
+  const normalizedSpaceUrl = normalizeHFSpaceUrl(hfSpaceUrl);
 
   const canvasRef = useRef(null);
   const imgRef = useRef(new Image());
@@ -98,7 +110,9 @@ export default function App() {
       return;
     }
 
-    if (!hfSpaceUrl || hfSpaceUrl.includes("YOUR_USERNAME") || hfSpaceUrl.includes("username-spacename")) {
+    const spaceBaseUrl = normalizeHFSpaceUrl(hfSpaceUrl);
+
+    if (!spaceBaseUrl || spaceBaseUrl.includes("YOUR_USERNAME") || spaceBaseUrl.includes("username-spacename")) {
       setError("❌ Please configure your Hugging Face Space URL first!");
       return;
     }
@@ -118,9 +132,9 @@ export default function App() {
 
       // Try Gradio Interface API endpoint (works with gr.Interface)
       const endpoints = [
-        `${hfSpaceUrl}/api/predict/`,           // Standard Gradio endpoint
-        `${hfSpaceUrl}/call/predict`,           // Alternative format
-        `${hfSpaceUrl}/api/predict`,            // Without trailing slash
+        `${spaceBaseUrl}/run/predict`,
+        `${spaceBaseUrl}/api/predict/`,
+        `${spaceBaseUrl}/api/predict`,
       ];
 
       let response = null;
@@ -169,6 +183,13 @@ export default function App() {
         // The output image from Gradio
         const outputImagePath = json.data[0];
         console.log("Output image:", outputImagePath);
+
+        const resolvedOutputImageUrl =
+          typeof outputImagePath === "string" && outputImagePath.startsWith("http")
+            ? outputImagePath
+            : typeof outputImagePath === "string" && outputImagePath.startsWith("data:")
+              ? outputImagePath
+              : `${spaceBaseUrl}${String(outputImagePath).startsWith("/") ? "" : "/"}${outputImagePath}`;
         
         // Create an image from the URL
         const img = new Image();
@@ -188,9 +209,9 @@ export default function App() {
         img.onerror = () => {
           setError("Failed to load result image from Space");
         };
-        img.src = outputImagePath;
+        img.src = resolvedOutputImageUrl;
         
-        setPredictions({ image: outputImagePath, message: "✅ Detection completed!" });
+        setPredictions({ image: resolvedOutputImageUrl, message: "✅ Detection completed!" });
       } else if (json?.error) {
         throw new Error(json.error);
       } else {
@@ -343,7 +364,7 @@ export default function App() {
         <input type="file" accept="image/*" onChange={handleFileChange} />
         <button 
           onClick={handleSubmit} 
-          disabled={loading || !hfSpaceUrl.includes("hf.space")}
+          disabled={loading || !normalizedSpaceUrl.includes("hf.space")}
           style={{ 
             marginLeft: "8px",
             padding: "8px 16px",
@@ -361,7 +382,7 @@ export default function App() {
         <button 
           onClick={async () => {
             try {
-              const response = await fetch(`${hfSpaceUrl}/config`);
+              const response = await fetch(`${normalizedSpaceUrl}/config`);
               if (response.ok) {
                 alert("✅ Space is running! Ready to use.");
               } else {
